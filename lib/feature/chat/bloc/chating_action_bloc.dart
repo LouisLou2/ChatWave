@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:chat_wave/constant/test_data.dart';
 import 'package:chat_wave/domain/entity/message_piece.dart';
+import 'package:chat_wave/feature/chat/bloc/chat_session_bloc.dart';
 import 'package:chat_wave/respository/interface/chat_rep.dart';
 import 'package:chat_wave/usecase/requester/interface/chat_requester.dart';
 import 'package:equatable/equatable.dart';
@@ -39,7 +40,8 @@ class MsgPieceWithSessionInfoArrived extends ChatActionEvent {
 
 class SendQuery extends ChatActionEvent {
   final String query;
-  SendQuery(this.query);
+  final int sessionId;
+  SendQuery(this.query,this.sessionId);
 }
 
 class StreamOpened extends ChatActionEvent {
@@ -90,11 +92,11 @@ class ReceivingPieces extends ChatActionState {
   List<Object?> get props => [];
 }
 
-class ChatActionFailure extends ChatActionState {
-  const ChatActionFailure();
-  @override
-  List<Object?> get props => [];
-}
+// class ChatActionFailure extends ChatActionState {
+//   const ChatActionFailure();
+//   @override
+//   List<Object?> get props => [];
+// }
 
 /*--------------------bloc----------------------*/
 class ChatActionBloc extends Bloc<ChatActionEvent, ChatActionState> {
@@ -105,7 +107,7 @@ class ChatActionBloc extends Bloc<ChatActionEvent, ChatActionState> {
   final ChatRep _chatRep = GetIt.I<ChatRep>();
   final ChatHistoryStateRep _chatHisStateRep = GetIt.I<ChatHistoryStateRep>();
 
-  late final StreamSubscription _streamSubscription;//目前这个正在进行的消息的订阅对象
+  late StreamSubscription _streamSubscription;//目前这个正在进行的消息的订阅对象
 
   ChatActionBloc() : super(const InitialChatActionState()) {
     on<OpenNewSessionPage>(_onOpenNewSessionPage);
@@ -181,6 +183,9 @@ class ChatActionBloc extends Bloc<ChatActionEvent, ChatActionState> {
     _chatHisStateRep.setSessionIdForTmpMsg();
     // 在流被打开的时候，数据库中也存了这条记录，现在要将他的sessionId改成正确的
     _chatRep.giveCorrectSessionId(invalidSessionId, session.sessionId);
+    // 通知ChatSessionBloc
+    GetIt.I<ChatSessionBloc>().add(NewSessionCreated(session));
+
     add(
       MsgPieceArrived(
         piece.toMessagePiece(),
@@ -202,6 +207,7 @@ class ChatActionBloc extends Bloc<ChatActionEvent, ChatActionState> {
     );
     // 开始使用requester发送消息
     _chatRequester.sendAQuery(
+      sessionId: event.sessionId,
       query: event.query,
       onStreamOpened: (StreamSubscription streamSubscription){
         add(
@@ -244,6 +250,7 @@ class ChatActionBloc extends Bloc<ChatActionEvent, ChatActionState> {
     // 如果是最后一条piece,就要插入到数据库, 整条消息就要插入到数据库
     if(piece.isEnd && piece.type != MessageType.waitingSign){
       _chatRep.saveMessage(_chatHisStateRep.messages.last);
+      emit(const ReceivingPieces());
       emit(const WaitingForQuery());
     }else{
       emit(const ReceivingPieces());

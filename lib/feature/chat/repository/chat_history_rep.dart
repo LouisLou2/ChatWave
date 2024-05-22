@@ -51,12 +51,16 @@ class ChatHistoryStateRep {
         messages.last.pieces.last.content=messages.last.pieces.last.content!+piece.content;
       }else if(piece.type==MessageType.cancelSign){
         messages.last.pieces.last.content='${messages.last.pieces.last.content!}\n${piece.content}';
+      }else if(piece.type == MessageType.imageUrl){
+        messages.last.pieces.add(
+          MessageBase.fromPiece(piece),
+        );
       }
-      return;
+    }else{
+      messages.last.pieces.add(
+        MessageBase.fromPiece(piece),
+      );
     }
-    messages.last.pieces.add(
-      MessageBase.fromPiece(piece),
-    );
   }
   void onTheMessageOver(){
     lastMessageEnd=true;

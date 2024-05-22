@@ -54,7 +54,7 @@ class OnBoardingPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(30),
                         boxShadow: [
                           BoxShadow(
-                            color: context.theme.colorScheme.onSurface.withOpacity(0.25),
+                            color: context.theme.colorScheme.onSurface.withOpacity(0.3),
                             offset: const Offset(4, 4),
                             blurRadius: 8,
                           ),
@@ -70,6 +70,7 @@ class OnBoardingPage extends StatelessWidget {
                               color: Theme.of(context).colorScheme.background,
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -91,7 +92,6 @@ class OnBoardingPage extends StatelessWidget {
                       fontSize: 38,
                       fontWeight: FontWeight.w600,
                       letterSpacing: -0.3,
-                      fontFamily: 'Poppins',
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -120,8 +120,10 @@ class OnBoardingPage extends StatelessWidget {
                       ),
                       child: Text(
                         'Get Started',
-                        style: Theme.of(context).textTheme.labelLarge!.copyWith(
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontSize: 18,
                           color: Theme.of(context).colorScheme.surface,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),

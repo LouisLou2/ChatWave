@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 abstract class ChatRequester{
   void sendAQuery({
     required String query,
+    required int sessionId,
     required void Function(MessagePiece) onPieceArrived,
     required VoidCallback onOver,
     required void Function(StreamSubscription) onStreamOpened,

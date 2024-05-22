@@ -12,6 +12,7 @@ abstract class ChatRep{
   Future<Result<List<Message>>> getMessagesOnlyNet({required int sessionId, required int offset, required int num});
   Future<Result<List<Message>>> getDefaultMessages({required int sessionId, required int num});
   Future<void> saveMessage(Message message);
+  Future<void> saveSession(ChatSession session);
   Future<void> giveCorrectSessionId(int oldId, int newId);
 
   //Future<Result<List<Message>>> getFirstBunchMessages({required int sessionId, required int num, required int maxNumIfNetFailed});

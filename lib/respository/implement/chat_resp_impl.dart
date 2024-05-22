@@ -55,6 +55,11 @@ class ChatRepImpl extends ChatRep {
     return _chatDbDs.giveCorrectSessionId(oldId, newId);
   }
 
+  @override
+  Future<void> saveSession(ChatSession session) {
+    return _chatDbDs.saveSession(session);
+  }
+
   // @override
   // Future<Result<List<Message>>> getFirstBunchMessages({required int sessionId, required int num, required int maxNumIfNetFailed}) async {
   //   Result<List<Message>> res = await _chatNetDs.getMessages(sessionId: sessionId, offset: 0, num: num);

@@ -22,10 +22,14 @@ class InitRetrieveSession extends ChatSessionEvent{
 class RetrieveChatSession extends ChatSessionEvent{
   const RetrieveChatSession();
 }
-class ChooseSession extends ChatSessionEvent{
-  ChatSession chosenSession;
-  ChooseSession(this.chosenSession);
+class NewSessionCreated extends ChatSessionEvent{
+  final ChatSession newSession;
+  NewSessionCreated(this.newSession);
 }
+// class ChooseSession extends ChatSessionEvent{
+//   ChatSession chosenSession;
+//   ChooseSession(this.chosenSession);
+// }
 
 /*-------------------state--------------------*/
 sealed class ChatSessionState extends Equatable{
@@ -55,6 +59,7 @@ class ChatSessionFailure extends ChatSessionState{
   @override
   List<Object?> get props => [];
 }
+
 /*-------------------state_repository-----------*/
 class ChatSessionStateRep {
   List<ChatSession> sessions = [];
@@ -75,6 +80,8 @@ class ChatSessionBloc extends Bloc<ChatSessionEvent, ChatSessionState>{
   ChatSessionBloc() : super(const ChatSessionInitial()){
     on<InitRetrieveSession>(_initRetrieveChatSession);
     on<RetrieveChatSession>(_retrieveChatSession);
+    // on<ChooseSession>(_chooseSession);
+    on<NewSessionCreated>(_onNewSessionCreated);
   }
 
   void _initRetrieveChatSession(InitRetrieveSession event, Emitter<ChatSessionState> emit) async {
@@ -123,4 +130,10 @@ class ChatSessionBloc extends Bloc<ChatSessionEvent, ChatSessionState>{
   // void _chooseSession(ChooseSession event, Emitter<ChatSessionState> emit) async {
   //   _historyStateRep.setNowSession(event.chosenSession);
   // }
+  void _onNewSessionCreated(NewSessionCreated event, Emitter<ChatSessionState> emit) async {
+    _stateRep.sessions.insert(0, event.newSession);
+    // 保存到数据库
+    _chatRep.saveSession(event.newSession);
+    emit(const ChatSessionSuccess());
+  }
 }

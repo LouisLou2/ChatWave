@@ -8,5 +8,6 @@ abstract class ChatDbDs{
   Future<Result<List<Message>>> getMessages({required int sessionId, required int offset, required int num});
 
   Future<void> saveMessage(Message message);
+  Future<void> saveSession(ChatSession session);
   Future<void> giveCorrectSessionId(int oldId, int newId);
 }

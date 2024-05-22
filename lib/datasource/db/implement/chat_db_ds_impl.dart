@@ -59,4 +59,11 @@ class ChatDbDsImpl extends ChatDbDs {
       }
     });
   }
+
+  @override
+  Future<void> saveSession(ChatSession session) {
+    return db.writeTxn(() async{
+      db.chatSessions.put(session);
+    });
+  }
 }

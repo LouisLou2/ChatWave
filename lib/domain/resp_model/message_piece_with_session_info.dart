@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:chat_wave/domain/entity/message_piece.dart';
 
 class MessagePieceSI{
@@ -15,8 +17,18 @@ class MessagePieceSI{
     required this.isEnd
   });
 
+  // static MessagePieceSI fromJsonStr(String jsonStr){
+  //   final obj = jsonDecode(jsonStr);
+  //   return MessagePieceSI(
+  //     sessionId: obj['sessionId'],
+  //     title: obj['title'],
+  //     type: obj['type'],
+  //     content: obj['content'],
+  //     isEnd: obj['isEnd']
+  //   );
+  // }
   MessagePieceSI.fromJson(Map<String, dynamic> json)
-      :sessionId = json['sessionid'],
+      : sessionId = json['sessionId'],
         title = json['title'],
         type = json['type'],
         content = json['content'],

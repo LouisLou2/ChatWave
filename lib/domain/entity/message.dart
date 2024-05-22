@@ -4,8 +4,8 @@ import 'message_piece.dart';
 part 'message.g.dart';
 
 class MessageType{
-  static const int pureText = 0;
-  static const int imageUrl = 1;
+  static const int pureText = 1;
+  static const int imageUrl = 2;
   static const int fileUrl = 2;
   static const int pluginJson = 3;
   static const int waitingSign = 4;// 客户端等待占位类型，例如content是一条消息"waiting for resp..."

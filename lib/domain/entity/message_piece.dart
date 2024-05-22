@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:chat_wave/domain/entity/message.dart';
 
 import '../../constant/app_strings.dart';
@@ -14,6 +16,15 @@ class MessagePiece{
     required this.content,
     required this.isEnd
   });
+
+  // static MessagePiece fromJsonNotEnd(String jsonStr){
+  //   final obj = jsonDecode(jsonStr);
+  //   return MessagePiece(
+  //     type: obj['type'],
+  //     content: obj['content'],
+  //     isEnd: false
+  //   );
+  // }
 
   MessagePiece.fromJsonNotEnd(Map<String, dynamic> json)
       :type = json['type'],

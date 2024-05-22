@@ -6,7 +6,9 @@ import 'package:chat_wave/feature/chat/widget/chat_bubble.dart';
 import 'package:chat_wave/helper/format_util.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 
 import '../../../constant/assets_const.dart';
 import '../../../domain/entity/message.dart';
@@ -46,6 +48,60 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
   ));
 
   bool isNowEditting=false;
+
+  late TextEditingController _textController;
+
+  late ScrollController _historyScrollCtrl;
+  late ScrollController _sessionScrollCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _textController = TextEditingController();
+    _historyScrollCtrl = ScrollController();
+    _sessionScrollCtrl = ScrollController();
+  }
+
+  void initScroll(){
+    // 滑动到最顶部就开始请求
+    _historyScrollCtrl.addListener(() {
+      print(_historyScrollCtrl.offset);
+      if (_historyScrollCtrl.offset <= 30) {
+        GetIt.I<ChatHistoryBloc>().add(const RetrieveChatHistory());
+      }
+    });
+    // 当页面构建完毕，scroll到最下方
+    SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
+      _historyScrollCtrl.animateTo(
+        _historyScrollCtrl.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    });
+
+    _sessionScrollCtrl.addListener(() {
+      if (_sessionScrollCtrl.offset <= 30) {
+        GetIt.I<ChatHistoryBloc>().add(const RetrieveChatHistory());
+      }
+    });
+    // 当页面构建完毕，scroll到最下方
+    SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
+      _sessionScrollCtrl.animateTo(
+        _sessionScrollCtrl.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _textController.dispose();
+    _historyScrollCtrl.dispose();
+    super.dispose();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -141,6 +197,7 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
                       },
                       builder: (context, state){
                         return ListView(
+                          controller: _sessionScrollCtrl,
                           padding: EdgeInsets.zero,
                           children:[
                               ..._getHistoryList(
@@ -189,71 +246,67 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
         child: Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            InkWell(
-              child: Padding(
-                padding: const EdgeInsets.only(left:15),
-                child: Icon(
-                  CupertinoIcons.doc_on_clipboard_fill,
-                  color: context.theme.colorScheme.onSurface,
-                  size: 25,
+            const SizedBox(width: 12,),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: context.theme.colorScheme.onSurface.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child:
+                TextFormField(
+                  controller: _textController,
+                  autofocus: false,
+                  decoration: InputDecoration(
+                    border: customBorder,
+                    enabledBorder:customBorder,
+                    focusedBorder:customBorder,
+                    focusedErrorBorder: customBorder,
+                    errorBorder: customBorder,
+                    hintText: 'Message',
+                    filled: true,
+                    //隐藏下划线
+                    //border: InputBorder.none,
+                    hintStyle: const TextStyle(fontSize: 15, color: Color(0xffAEAEAE)),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  ),
                 ),
               ),
             ),
-            InkWell(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 13),
-                child: Icon(
-                  Icons.photo,
-                  color: context.theme.colorScheme.onSurface,
-                  size: 25,
-                ),
-              ),
-            ),
-            ConstrainedBox(
-              constraints:BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width-150,
-                maxHeight: 100,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: context.theme.colorScheme.onSurface.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child:
-                      TextFormField(
-                        autofocus: false,
-                        decoration: InputDecoration(
-                          border: customBorder,
-                          enabledBorder:customBorder,
-                          focusedBorder:customBorder,
-                          focusedErrorBorder: customBorder,
-                          errorBorder: customBorder,
-                          hintText: 'Message',
-                          filled: true,
-                          //隐藏下划线
-                          //border: InputBorder.none,
-                          hintStyle: const TextStyle(fontSize: 15, color: Color(0xffAEAEAE)),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                        ),
-                      ),
+            BlocBuilder<ChatActionBloc,ChatActionState>(
+              buildWhen: (previous, current) {
+                return current != previous;
+              },
+              builder: (context, state){
+                late VoidCallback onTap;
+                late IconData icon;
+                if(state is ReceivingPieces){
+                  onTap = cancelAnswer;
+                }else if (state is WaitingForFirstQuery || state is WaitingForQuery) {
+                  onTap=(){
+                    sendQuery(query: _textController.text, isFirst: state is WaitingForFirstQuery);
+                    _textController.clear();
+                  };
+                }
+                if(state is WaitingForFirstQuery || state is WaitingForQuery){
+                  icon = CupertinoIcons.arrow_up_circle_fill;
+                }else if(state is ReceivingPieces){
+                  icon = Icons.cancel_outlined;
+                }else{
+                  icon = Icons.accessible_forward_outlined;
+                }
+                return InkWell(
+                  onTap: onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 13),
+                    child: Icon(
+                      icon,
+                      color: context.theme.colorScheme.onSurface,
+                      size: 33,
                     ),
-                  ],
-                ),
-              ),
-            ),
-            InkWell(
-              onTap: () {},
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 13),
-                child: Icon(
-                  CupertinoIcons.arrow_up_circle_fill,
-                  color: context.theme.colorScheme.onSurface,
-                  size: 28,
-                ),
-              ),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -327,6 +380,7 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
                               color: context.theme.colorScheme.background,
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -345,16 +399,20 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
               Expanded(
                 child: BlocBuilder<ChatActionBloc, ChatActionState>(
                   buildWhen: (previous, current) {
-                    return current is StreamOpened || current is MsgPieceArrived;
+                    // return current is StreamOpened || current is MsgPieceArrived;
+                    return true;
                   },
                   builder: (context, state){
                     return BlocBuilder<ChatHistoryBloc,ChatHistoryState>(
                       buildWhen: (previous, current) {
+                        return true;
                         return current is! ChatHistoryFailure;
                       },
                       builder: (context, state){
                         List<Message> messages = context.read<ChatHistoryStateRep>().messages;
-                        return (state is! ChatHistoryLoading)? ListView.builder(
+                        return (state is! ChatHistoryLoading) ?
+                        ListView.builder(
+                            controller: _historyScrollCtrl,
                           itemCount: messages.length+1,
                           itemBuilder: (context, index){
                             if(index==messages.length){
@@ -364,6 +422,7 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
                           }
                         ):
                         ListView.builder(
+                          controller: _historyScrollCtrl,
                           itemCount: messages.length+2,
                           itemBuilder: (context, index){
                             if(index==0){
@@ -372,7 +431,9 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
                             if(index==messages.length+1){
                               return const SizedBox(height: 100);
                             }
-                            return ChatBubble(msg: messages[index-1]);
+                            return ChatBubble(
+                              msg: messages[index-1],
+                            );
                           }
                         );
                       },
@@ -501,5 +562,22 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
           ):const SizedBox(width: 15,),
       ],
     );
+  }
+  /*-------------------------Function Area----------------------------*/
+  void sendQuery({
+    required String query,
+    required bool isFirst,
+  }){
+    if(query.isEmpty)return;
+    GetIt.I<ChatActionBloc>().add(
+      isFirst? SendFirstQuery(query): SendQuery(
+          query,
+          GetIt.I<ChatHistoryStateRep>().nowSession.sessionId,
+      ),
+    );
+  }
+
+  void cancelAnswer(){
+    GetIt.I<ChatActionBloc>().add(const TerminateStream());
   }
 }

@@ -31,23 +31,36 @@ class ChatBubble extends StatelessWidget{
     else {
       innerWidget = MultiPartBubble(msg: msg);
     }
-    return msg.isSender ? FadeInRight(
-      duration: const Duration(milliseconds: 300),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child:Align(
-          alignment: Alignment.centerRight,
-          child: innerWidget,
-        ),
+    // return msg.isSender ? FadeInRight(
+    //   duration: const Duration(milliseconds: 300),
+    //   child: Padding(
+    //     padding: const EdgeInsets.symmetric(vertical: 5),
+    //     child:Align(
+    //       alignment: Alignment.centerRight,
+    //       child: innerWidget,
+    //     ),
+    //   ),
+    // ): FadeInLeft(
+    //   duration: const Duration(milliseconds: 300),
+    //   child: Padding(
+    //     padding: const EdgeInsets.symmetric(vertical: 5),
+    //     child:Align(
+    //       alignment: Alignment.centerLeft,
+    //       child: innerWidget,
+    //     ),
+    //   ),
+    // );
+    return msg.isSender ? Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child:Align(
+        alignment: Alignment.centerRight,
+        child: innerWidget,
       ),
-    ): FadeInLeft(
-      duration: const Duration(milliseconds: 300),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child:Align(
-          alignment: Alignment.centerLeft,
-          child: innerWidget,
-        ),
+    ):Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child:Align(
+        alignment: Alignment.centerLeft,
+        child: innerWidget,
       ),
     );
   }

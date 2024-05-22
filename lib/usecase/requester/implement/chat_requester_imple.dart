@@ -15,6 +15,7 @@ class ChatRequesterImple extends ChatRequester {
   @override
   void sendAQuery({
     required String query,
+    required int sessionId,
     required void Function(MessagePiece) onPieceArrived,
     required VoidCallback onOver,
     required void Function(StreamSubscription) onStreamOpened,
@@ -22,13 +23,22 @@ class ChatRequesterImple extends ChatRequester {
     EventFlux.instance.connect(
       EventFluxConnectionType.get,
       NetworkPathCollector.chat,
+      header: {
+        'Content-Type': 'application/json',
+      },
+      body: {
+        'query': query,
+        'session_id': sessionId,
+      },
       onSuccessCallback: (EventFluxResponse? response) {
         if(response?.stream==null){
           return;
         }
         StreamSubscription subsc = response!.stream!.listen(
           (event) {
-            dynamic data = jsonDecode(event.data);
+            dynamic finalData = event.data.substring(0,event.data.length-1);
+            print(finalData);
+            dynamic data = jsonDecode(finalData);
             MessagePiece piece = MessagePiece.fromJsonNotEnd(data);
             onPieceArrived(piece);
           },
@@ -42,21 +52,30 @@ class ChatRequesterImple extends ChatRequester {
   @override
   void startASession({required String query, required void Function(MessagePieceSI p1) onFirstPieceArrived, required void Function(MessagePiece p1) onSubsPieceArrived, required VoidCallback onOver, required void Function(StreamSubscription p1) onStreamOpened}) {
     EventFlux.instance.connect(
-      EventFluxConnectionType.get,
-      NetworkPathCollector.new_chat_session,
+      EventFluxConnectionType.post,
+      header: {
+        'Content-Type': 'application/json',
+      },
+      NetworkPathCollector.chat,
+      body: {
+        'query': query,
+      },
       onSuccessCallback: (EventFluxResponse? response) {
         if(response?.stream==null){
           return;
         }
         StreamSubscription subsc = response!.stream!.listen(
           (event) {
-            dynamic data = jsonDecode(event.data);
+            String finalData= event.data.substring(0,event.data.length-1);
+            dynamic data = jsonDecode(finalData);
             if(data['sessionId']!=null){
               MessagePieceSI piece = MessagePieceSI.fromJson(data);
               onFirstPieceArrived(piece);
+              print(finalData);
             }else{
               MessagePiece piece = MessagePiece.fromJsonNotEnd(data);
               onSubsPieceArrived(piece);
+              print(finalData);
             }
           },
           onDone: onOver,

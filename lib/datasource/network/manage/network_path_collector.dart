@@ -9,7 +9,7 @@ class NetworkPathCollector {
   /*------------------分类-------------------*/
   static const String chat_session = "/chat_session";
   static const String message = "/message";
-
-  static const String new_chat_session = "/new_chat";
-  static const String chat= "/chat";
+  /*---------------sse----------------------*/
+  static const String new_chat_session = "$userApi/new_chat";
+  static const String chat= "$userApi/chat";
 }
