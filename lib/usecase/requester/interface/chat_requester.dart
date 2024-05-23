@@ -10,6 +10,7 @@ abstract class ChatRequester{
     required void Function(MessagePiece) onPieceArrived,
     required VoidCallback onOver,
     required void Function(StreamSubscription) onStreamOpened,
+    required void Function() onError,
   });
 
   void startASession({
@@ -18,5 +19,6 @@ abstract class ChatRequester{
     required void Function(MessagePiece) onSubsPieceArrived,
     required VoidCallback onOver,
     required void Function(StreamSubscription) onStreamOpened,
+    required void Function() onError,
   });
 }

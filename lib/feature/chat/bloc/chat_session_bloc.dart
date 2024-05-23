@@ -12,6 +12,12 @@ import '../../../respository/interface/chat_rep.dart';
 import '../repository/chat_history_rep.dart';
 import 'chat_history_bloc.dart';
 
+enum SessionChangeFrom{
+  Local,
+  Net,
+  UserNow,
+}
+
 sealed class ChatSessionEvent{
   const ChatSessionEvent();
 }
@@ -49,9 +55,11 @@ class ChatSessionLoading extends ChatSessionState{
 }
 
 class ChatSessionSuccess extends ChatSessionState{
-  const ChatSessionSuccess();
+  final int len;
+  final SessionChangeFrom chageFrom;
+  const ChatSessionSuccess({required this.len, required this.chageFrom});
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [len, chageFrom];
 }
 
 class ChatSessionFailure extends ChatSessionState{
@@ -96,7 +104,10 @@ class ChatSessionBloc extends Bloc<ChatSessionEvent, ChatSessionState>{
       emit(const ChatSessionFailure());
     } else {
       _stateRep.setSessions(result.data!);
-      emit(const ChatSessionSuccess());
+      emit(ChatSessionSuccess(
+        len: _stateRep.sessions.length,
+        chageFrom: SessionChangeFrom.Local,
+      ));
     }
     // 开始从网络获取最新数据
     result = await _chatRep.getRecentChatsOnlyNet(
@@ -109,7 +120,10 @@ class ChatSessionBloc extends Bloc<ChatSessionEvent, ChatSessionState>{
       emit(const ChatSessionFailure());
     } else {
       _stateRep.setSessions(result.data!);
-      emit(const ChatSessionSuccess());
+      emit(ChatSessionSuccess(
+        len: _stateRep.sessions.length,
+        chageFrom: SessionChangeFrom.Net,
+      ));
     }
   }
   void _retrieveChatSession(RetrieveChatSession event, Emitter<ChatSessionState> emit) async {
@@ -124,7 +138,10 @@ class ChatSessionBloc extends Bloc<ChatSessionEvent, ChatSessionState>{
       emit(const ChatSessionFailure());
     } else {
       _stateRep.addSessions(result.data!);
-      emit(const ChatSessionSuccess());
+      emit(ChatSessionSuccess(
+        len: _stateRep.sessions.length,
+        chageFrom: SessionChangeFrom.Net,
+      ));
     }
   }
   // void _chooseSession(ChooseSession event, Emitter<ChatSessionState> emit) async {
@@ -134,6 +151,9 @@ class ChatSessionBloc extends Bloc<ChatSessionEvent, ChatSessionState>{
     _stateRep.sessions.insert(0, event.newSession);
     // 保存到数据库
     _chatRep.saveSession(event.newSession);
-    emit(const ChatSessionSuccess());
+    emit(ChatSessionSuccess(
+      len: _stateRep.sessions.length,
+      chageFrom: SessionChangeFrom.UserNow,
+    ));
   }
 }

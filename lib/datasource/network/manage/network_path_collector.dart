@@ -7,8 +7,8 @@ class NetworkPathCollector {
   static const String restfulAPI = ""; // restful api
   static const String userApi = "$host$restfulAPI";// dio的baseUrl，客户端一切请求都是基于这个baseUrl的
   /*------------------分类-------------------*/
-  static const String chat_session = "/chat_session";
-  static const String message = "/message";
+  static const String session_history = "/session_list";
+  static const String message_history = "/session_history";
   /*---------------sse----------------------*/
   static const String new_chat_session = "$userApi/new_chat";
   static const String chat= "$userApi/chat";

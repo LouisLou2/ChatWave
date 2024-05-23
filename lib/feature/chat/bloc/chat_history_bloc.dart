@@ -1,6 +1,7 @@
 /*-------------------event------------------------*/
 import 'package:chat_wave/constant/feature_const.dart';
 import 'package:chat_wave/domain/util_model/res_info.dart';
+import 'package:chat_wave/feature/chat/bloc/chat_session_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -47,9 +48,11 @@ class ChatHistoryLoading extends ChatHistoryState {
 }
 
 class ChatHistorySuccess extends ChatHistoryState {
-  const ChatHistorySuccess();
+  final int len;
+  final SessionChangeFrom hisFrom;
+  const ChatHistorySuccess({required this.len, required this.hisFrom});
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [len, hisFrom];
 }
 
 class ChatHistoryFailure extends ChatHistoryState {
@@ -70,12 +73,14 @@ class ChatHistoryBloc extends Bloc<ChatHistoryEvent, ChatHistoryState> {
     on<RetrieveChatHistory>(_retrieveChatHistory);
   }
 
+  // 如果这里仍然返回ChatHistorySuccess(),会导致先前和现在的状态都是ChatHistorySuccess()，连buildWhen都不会被调用
   void _openNewChatSession(OpenNewChatSession event, Emitter<ChatHistoryState> emit) async {
     _chatHisStateRep.clear();
-    emit(const ChatHistorySuccess());
+    emit(const ChatHistoryInitial());
   }
 
   void _initRetrieveChatHistory(InitRetrieveHistory event, Emitter<ChatHistoryState> emit) async {
+    _chatHisStateRep.nowSession=event.session;
     emit(const ChatHistoryLoading());
     int sessionId = _chatHisStateRep.nowSession.sessionId;
 
@@ -88,7 +93,10 @@ class ChatHistoryBloc extends Bloc<ChatHistoryEvent, ChatHistoryState> {
       emit(const ChatHistoryFailure());
     } else {
       _chatHisStateRep.initHistory(res.data!);
-      emit(const ChatHistorySuccess());
+      emit(ChatHistorySuccess(
+        len: _chatHisStateRep.messages.length,
+        hisFrom: SessionChangeFrom.Local,
+      ));
     }
     // 尝试从网络获取
     res = await _chatRep.getMessagesOnlyNet(
@@ -98,7 +106,10 @@ class ChatHistoryBloc extends Bloc<ChatHistoryEvent, ChatHistoryState> {
     );
     if (res.isSuccess) {
       _chatHisStateRep.initHistory(res.data!);
-      emit(const ChatHistorySuccess());
+      emit(ChatHistorySuccess(
+        len: _chatHisStateRep.messages.length,
+        hisFrom: SessionChangeFrom.Net,
+      ));
     } else {
       emit(const ChatHistoryFailure());
     }
@@ -114,7 +125,10 @@ class ChatHistoryBloc extends Bloc<ChatHistoryEvent, ChatHistoryState> {
     );
     if (res.isSuccess) {
       _chatHisStateRep.addHistoryMessages(res.data!);
-      emit(const ChatHistorySuccess());
+      emit(ChatHistorySuccess(
+        len: _chatHisStateRep.messages.length,
+        hisFrom: SessionChangeFrom.Net,
+      ));
     } else {
       emit(const ChatHistoryFailure());
     }

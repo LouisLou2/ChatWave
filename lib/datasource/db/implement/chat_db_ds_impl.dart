@@ -16,7 +16,7 @@ class ChatDbDsImpl extends ChatDbDs {
       return Result.success(
         await db.messages.where().
         sessionIdEqualTo(sessionId).
-        sortByTimeDesc().
+        sortByTime().
         offset(offset).
         limit(num).
         findAll(),

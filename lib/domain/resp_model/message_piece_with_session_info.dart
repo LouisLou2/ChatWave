@@ -28,7 +28,7 @@ class MessagePieceSI{
   //   );
   // }
   MessagePieceSI.fromJson(Map<String, dynamic> json)
-      : sessionId = json['sessionId'],
+      : sessionId = json['session_id'],
         title = json['title'],
         type = json['type'],
         content = json['content'],

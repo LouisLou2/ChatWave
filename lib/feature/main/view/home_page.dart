@@ -24,8 +24,26 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
 
+  late ScrollController _scrollController1;
+  late ScrollController _scrollController2;
+
   @override
   void initState(){
+    _scrollController1 = ScrollController();
+    _scrollController2 = ScrollController();
+    // 监听
+    _scrollController1.addListener(() {
+      if (_scrollController1.position.pixels == _scrollController1.position.maxScrollExtent) {
+        // 到达底部
+        GetIt.I<HomePageLoadBloc>().add(const RetrieveRecentChats());
+      }
+    });
+    _scrollController2.addListener(() {
+      if (_scrollController2.position.pixels == _scrollController2.position.maxScrollExtent) {
+        // 到达底部
+        GetIt.I<HomePageLoadBloc>().add(const RetrieveRecentChats());
+      }
+    });
     super.initState();
     // 发出页面加载的动画
     GetIt.I<HomePageLoadBloc>().add(const StartLoadHomePage());
@@ -33,6 +51,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose(){
+    _scrollController1.dispose();
     super.dispose();
   }
 
@@ -65,7 +84,7 @@ class _HomePageState extends State<HomePage> {
             size: Size.infinite,
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 55, 8, 0),
+            padding: const EdgeInsets.fromLTRB(8, 45, 8, 0),
             child: Column(
               children: [
                 LayoutBuilder(builder: (context, constraints) {
@@ -235,6 +254,7 @@ class _HomePageState extends State<HomePage> {
                           return _getEmptyHitorySign();
                         }
                         return ListView.separated(
+                          controller: _scrollController1,
                           padding: EdgeInsets.zero,
                           shrinkWrap: true,
                           physics: const BouncingScrollPhysics(),
@@ -311,19 +331,40 @@ class _HomePageState extends State<HomePage> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8,),
-              child:ListView.separated(
-                padding: EdgeInsets.zero,
-                shrinkWrap: true,
-                physics: const BouncingScrollPhysics(),
-                itemCount: 10,
-                separatorBuilder: (_, __) =>
-                const SizedBox(height: 4),
-                itemBuilder: (context, index) {
-                  return HistoryItem(
-                    label: 'Hello',
-                    imagePath: AssetsConst.imageLogo,
-                    color: context.theme.primaryColor,
-                  );
+              child: BlocBuilder<HomePageLoadBloc, HomePageLoadState>(
+                buildWhen: (previous, current) {
+                  // 如果前一个状态是success, 现在是loading，就不更新
+                  return !(previous is HomePageLoadSuccess && current is HomePageLoadInProgress) && current is! HomePageLoadFailure;
+                },
+                builder: (context, state) {
+                  if(state is ChatHistoryLoading){
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }else if(state is HomePageLoadSuccess){
+                    var recentChats = context.read<HomePageStateRep>().recentChats;
+                    if(recentChats.isEmpty){
+                      return _getEmptyHitorySign();
+                    }
+                    return ListView.separated(
+                      controller: _scrollController2,
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: recentChats.length,
+                      separatorBuilder: (_, __) =>
+                      const SizedBox(height: 4),
+                      itemBuilder: (context, index) {
+                        return HistoryItem(
+                          label: recentChats[index].title,
+                          imagePath: AssetsConst.imageLogo,
+                          color: context.theme.primaryColor,
+                          onPressed: ()=>_enterChatPage(recentChats[index]),
+                        );
+                      },
+                    );
+                  }
+                  return const SizedBox();
                 },
               ),
             ),

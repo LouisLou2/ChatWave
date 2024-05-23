@@ -73,33 +73,36 @@ class _MyAppState extends State<MyApp>{
               RepositoryProvider<ChatHistoryStateRep>.value(value: GetIt.I<ChatHistoryStateRep>(),),
             ],
             child:  BlocBuilder<ThemeBloc, ThemeState>(
+              buildWhen: (ThemeState previous, ThemeState current) {
+                return previous != current;
+              },
               builder: (BuildContext context, ThemeState state) {
                 return MaterialApp(
-                    title: 'Chat Wave',
-                    theme: ThemeCollection.light,
-                    darkTheme: ThemeCollection.dark,
-                    themeMode: state.mode,
-                    navigatorKey: NavigationHelper.key,
-                    onGenerateRoute: RouteGenerator.generateRoute,
-                    builder: EasyLoading.init(),
-                    routes: RouteCollector.simpleRouteMap,
-                    home: BlocBuilder<AuthBloc, AuthState>(
-                      builder: (BuildContext context, AuthState state) {
-                        if(state is CheckingAuthState){
-                          return const Center(
-                            child:CircularProgressIndicator(),
-                          );
-                        }else if(state is LoggedInState){
-                          return const HomePage(); // 进入主界面
-                        }else if(state is NotLoggedInState){
-                          return const OnBoardingPage(); // 进入欢迎页面
-                        }
-                        // error
+                  title: 'Chat Wave',
+                  theme: ThemeCollection.light,
+                  darkTheme: ThemeCollection.dark,
+                  themeMode: state.mode,
+                  navigatorKey: NavigationHelper.key,
+                  onGenerateRoute: RouteGenerator.generateRoute,
+                  builder: EasyLoading.init(),
+                  routes: RouteCollector.simpleRouteMap,
+                  home: BlocBuilder<AuthBloc, AuthState>(
+                    builder: (BuildContext context, AuthState state) {
+                      if(state is CheckingAuthState){
                         return const Center(
-                          child: Text('Error'),
+                          child:CircularProgressIndicator(),
                         );
-                      },
-                    )
+                      }else if(state is LoggedInState){
+                        return const HomePage(); // 进入主界面
+                      }else if(state is NotLoggedInState){
+                        return const OnBoardingPage(); // 进入欢迎页面
+                      }
+                      // error
+                      return const Center(
+                        child: Text('Error'),
+                      );
+                    },
+                  ),
                 );
               },
             ),

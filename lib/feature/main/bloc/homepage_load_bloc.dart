@@ -1,3 +1,4 @@
+import 'package:chat_wave/feature/chat/bloc/chat_session_bloc.dart';
 import 'package:chat_wave/respository/interface/chat_rep.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -38,9 +39,11 @@ class HomePageLoadInProgress extends HomePageLoadState {
 }
 
 class HomePageLoadSuccess extends HomePageLoadState {
-const HomePageLoadSuccess();
+  final int len;
+  final SessionChangeFrom changeFrom;
+  const HomePageLoadSuccess({required this.len, required this.changeFrom});
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [len,changeFrom];
 }
 
 class HomePageLoadFailure extends HomePageLoadState {
@@ -84,7 +87,12 @@ class HomePageLoadBloc extends Bloc<HomePageLoadEvent, HomePageLoadState> {
       emit(const HomePageLoadFailure());
     } else {
       _homeStateRep.setRecentChats(result.data!);
-      emit(const HomePageLoadSuccess());
+      emit(
+        HomePageLoadSuccess(
+          len: _homeStateRep.recentChats.length,
+          changeFrom: SessionChangeFrom.Local,
+        ),
+      );
     }
     // 开始从网络获取最新数据
     result = await _chatRep.getRecentChatsOnlyNet(
@@ -97,9 +105,15 @@ class HomePageLoadBloc extends Bloc<HomePageLoadEvent, HomePageLoadState> {
       emit(const HomePageLoadFailure());
     } else {
       _homeStateRep.setRecentChats(result.data!);
-      emit(const HomePageLoadSuccess());
+      emit(
+        HomePageLoadSuccess(
+          len: _homeStateRep.recentChats.length,
+          changeFrom: SessionChangeFrom.Net,
+        ),
+      );
     }
   }
+
   void _retrieveRecentChats(RetrieveRecentChats event, Emitter<HomePageLoadState> emit)async {
     emit(const HomePageLoadInProgress());
     Result<List<ChatSession>> result = await _chatRep.getRecentChatsOnlyNet(
@@ -112,7 +126,12 @@ class HomePageLoadBloc extends Bloc<HomePageLoadEvent, HomePageLoadState> {
       emit(const HomePageLoadFailure());
     } else {
       _homeStateRep.addRecentChats(result.data!);
-      emit(const HomePageLoadSuccess());
+      emit(
+        HomePageLoadSuccess(
+          len: _homeStateRep.recentChats.length,
+          changeFrom: SessionChangeFrom.Net,
+        ),
+      );
     }
   }
 }

@@ -3,6 +3,7 @@ import 'package:chat_wave/extension/widget_extension.dart';
 import 'package:chat_wave/feature/chat/bloc/chat_history_bloc.dart';
 import 'package:chat_wave/feature/chat/bloc/chat_session_bloc.dart';
 import 'package:chat_wave/feature/chat/widget/chat_bubble.dart';
+import 'package:chat_wave/feature/main/bloc/homepage_load_bloc.dart';
 import 'package:chat_wave/helper/format_util.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import 'package:get_it/get_it.dart';
 import '../../../constant/assets_const.dart';
 import '../../../domain/entity/message.dart';
 import '../../../helper/time_util.dart';
+import '../../../router/navigation_helper.dart';
 import '../../../style/app_colors.dart';
 import '../../../ui/widget/backgroud_curves_painter.dart';
 import '../bloc/chating_action_bloc.dart';
@@ -31,21 +33,9 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
       borderSide: const BorderSide(style: BorderStyle.none)
   );
 
-  late final AnimationController _controller = AnimationController(
-    duration: const Duration(milliseconds: 200),
-    vsync: this,
-  );
+  late AnimationController _controller;
 
-  late final Animation<Offset> _offsetAnimation1 = Tween<Offset>(
-    begin: const Offset(0.7, 0.0), // 从屏幕外的右边开始
-    end: Offset.zero,
-  ).animate(CurvedAnimation(
-    parent: _controller,
-    curve: const Interval(
-      0.4, 1.0,
-      curve: Curves.easeIn,
-    ),
-  ));
+  late Animation<Offset> _offsetAnimation1;
 
   bool isNowEditting=false;
 
@@ -60,37 +50,58 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
     _textController = TextEditingController();
     _historyScrollCtrl = ScrollController();
     _sessionScrollCtrl = ScrollController();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _offsetAnimation1 = Tween<Offset>(
+      begin: const Offset(0.7, 0.0), // 从屏幕外的右边开始
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(
+        0.4, 1.0,
+        curve: Curves.easeIn,
+      ),
+    ));
+    initScroll();
   }
 
   void initScroll(){
-    // 滑动到最顶部就开始请求
-    _historyScrollCtrl.addListener(() {
-      print(_historyScrollCtrl.offset);
-      if (_historyScrollCtrl.offset <= 30) {
-        GetIt.I<ChatHistoryBloc>().add(const RetrieveChatHistory());
-      }
-    });
-    // 当页面构建完毕，scroll到最下方
-    SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
-      _historyScrollCtrl.animateTo(
-        _historyScrollCtrl.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    });
 
-    _sessionScrollCtrl.addListener(() {
-      if (_sessionScrollCtrl.offset <= 30) {
-        GetIt.I<ChatHistoryBloc>().add(const RetrieveChatHistory());
-      }
-    });
     // 当页面构建完毕，scroll到最下方
     SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
-      _sessionScrollCtrl.animateTo(
-        _sessionScrollCtrl.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      // 滑动到最顶部就开始请求
+      _historyScrollCtrl.addListener(() {
+        if (_historyScrollCtrl.position.pixels == _historyScrollCtrl.position.minScrollExtent) {
+          GetIt.I<ChatHistoryBloc>().add(const RetrieveChatHistory());
+        }
+      });
+      Future.delayed(const Duration(milliseconds: 300),(){
+        if(_historyScrollCtrl.hasClients){
+          _historyScrollCtrl.animateTo(
+            _historyScrollCtrl.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      });
+
+      _sessionScrollCtrl.addListener(() {
+        if (_sessionScrollCtrl.position.pixels == _sessionScrollCtrl.position.minScrollExtent) {
+          // 当滚动位置到达底部时，调用你的函数
+          GetIt.I<ChatHistoryBloc>().add(const RetrieveChatHistory());
+        }
+      });
+      Future.delayed(const Duration(milliseconds: 300),(){
+        if(_sessionScrollCtrl.hasClients){
+          _sessionScrollCtrl.animateTo(
+            _sessionScrollCtrl.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      });
     });
   }
 
@@ -275,11 +286,13 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
             ),
             BlocBuilder<ChatActionBloc,ChatActionState>(
               buildWhen: (previous, current) {
-                return current != previous;
+                return current != previous;//仅当状态改变时重建
               },
               builder: (context, state){
-                late VoidCallback onTap;
-                late IconData icon;
+
+                VoidCallback onTap = (){};
+                IconData icon = Icons.accessible_forward_outlined;
+
                 if(state is ReceivingPieces){
                   onTap = cancelAnswer;
                 }else if (state is WaitingForFirstQuery || state is WaitingForQuery) {
@@ -288,24 +301,41 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
                     _textController.clear();
                   };
                 }
-                if(state is WaitingForFirstQuery || state is WaitingForQuery){
-                  icon = CupertinoIcons.arrow_up_circle_fill;
-                }else if(state is ReceivingPieces){
-                  icon = Icons.cancel_outlined;
-                }else{
-                  icon = Icons.accessible_forward_outlined;
-                }
-                return InkWell(
-                  onTap: onTap,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 13),
-                    child: Icon(
-                      icon,
-                      color: context.theme.colorScheme.onSurface,
-                      size: 33,
+                if(state is WaitingForFirstQuery || state is WaitingForQuery||state is ReceivingPieces){
+                  if(state is WaitingForFirstQuery || state is WaitingForQuery) {
+                    icon = CupertinoIcons.arrow_up_circle_fill;
+                  }else if(state is ReceivingPieces){
+                    icon = Icons.cancel;
+                  }
+                  return InkWell(
+                    onTap: onTap,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 13),
+                      child: Icon(
+                        icon,
+                        // color: context.theme.colorScheme.onSurface,
+                        size: 33,
+                      ),
                     ),
-                  ),
-                );
+                  );
+                }else if(state is WaitingForStream){
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15),
+                    child:SizedBox(
+                      height: 27,
+                      width: 27,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(context.theme.colorScheme.onSurface),
+                      ),
+                    ),
+                  );
+                }else{
+                  return Icon(
+                    icon,
+                    size: 33,
+                    color: context.theme.colorScheme.onSurface.withOpacity(0.5),
+                  );
+                }
               },
             ),
           ],
@@ -335,10 +365,10 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
           ),
           Column(
             children: [
-              const SizedBox(height: 48,),
+              const SizedBox(height: 30,),
               LayoutBuilder(builder: (context, constraints) {
                 return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Padding(
                       padding: const EdgeInsets.only(left: 10),
@@ -353,6 +383,20 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
                           color: context.theme.colorScheme.onSurface,
                         ),
                       )
+                    ),
+                    Padding(
+                        padding: const EdgeInsets.only(left: 10),
+                        child: IconButton(
+                          onPressed: () {
+                            NavigationHelper.pop();
+                            //GetIt.I<HomePageLoadBloc>().add(const StartLoadHomePage());
+                          },
+                          icon: Icon(
+                            Icons.arrow_back_ios,
+                            size: 25,
+                            color: context.theme.colorScheme.onSurface,
+                          ),
+                        )
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -400,19 +444,18 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
                 child: BlocBuilder<ChatActionBloc, ChatActionState>(
                   buildWhen: (previous, current) {
                     // return current is StreamOpened || current is MsgPieceArrived;
-                    return true;
+                    return previous != current || (previous==current&&previous is ReceivingPieces);
                   },
                   builder: (context, state){
                     return BlocBuilder<ChatHistoryBloc,ChatHistoryState>(
                       buildWhen: (previous, current) {
-                        return true;
                         return current is! ChatHistoryFailure;
                       },
                       builder: (context, state){
                         List<Message> messages = context.read<ChatHistoryStateRep>().messages;
                         return (state is! ChatHistoryLoading) ?
                         ListView.builder(
-                            controller: _historyScrollCtrl,
+                          controller: _historyScrollCtrl,
                           itemCount: messages.length+1,
                           itemBuilder: (context, index){
                             if(index==messages.length){

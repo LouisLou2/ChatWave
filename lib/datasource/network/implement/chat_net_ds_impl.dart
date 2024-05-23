@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:chat_wave/datasource/network/manage/network_config.dart';
 import 'package:chat_wave/datasource/network/manage/network_manager.dart';
 import 'package:chat_wave/datasource/network/manage/network_path_collector.dart';
@@ -21,10 +23,10 @@ class ChatNetDsImpl extends ChatNetDs {
   @override
   Future<Result<List<Message>>> getMessages({required int sessionId, required int offset, required int num}) async {
     try{
-      Response response= await  _chatDio.get(
-        NetworkPathCollector.message,
+      Response response= await  _chatDio.post(
+        NetworkPathCollector.message_history,
         data:{
-          'sessionId':sessionId,
+          'session_id':sessionId,
           'offset':offset,
           'num':num,
         },
@@ -33,7 +35,8 @@ class ChatNetDsImpl extends ChatNetDs {
       RespBody respBody= RespBody.fromJson(response.data);
 
       if(respBody.code==ResCode.SUCCESS){
-        return Result.success(MessageResp.fromJson(respBody.data,sessionId).messages);
+        final data=jsonDecode(respBody.data);
+        return Result.success(MessageResp.fromJson(data,sessionId).messages);
       }else{
         return Result.abnormal(respBody.code);
       }
@@ -45,8 +48,8 @@ class ChatNetDsImpl extends ChatNetDs {
   @override
   Future<Result<List<ChatSession>>> getRecentChats({required int offset, required int num,required int userId}) async{
     try{
-      Response response= await  _chatDio.get(
-        NetworkPathCollector.chat_session,
+      Response response= await  _chatDio.post(
+        NetworkPathCollector.session_history,
         data:{
           'offset':offset,
           'num':num,
@@ -55,7 +58,8 @@ class ChatNetDsImpl extends ChatNetDs {
       );
       RespBody respBody= RespBody.fromJson(response.data);
       if(respBody.code==ResCode.SUCCESS){
-        ChatSessionResp chatSessionResp = ChatSessionResp.fromJson(respBody.data,userId);
+        final data=jsonDecode(respBody.data);
+        ChatSessionResp chatSessionResp = ChatSessionResp.fromJson(data,userId);
         return Result.success(chatSessionResp.chatSessions);
       }else{
         return Result.abnormal(respBody.code);

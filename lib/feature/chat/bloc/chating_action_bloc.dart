@@ -63,33 +63,61 @@ class TerminateStream extends ChatActionEvent {
   const TerminateStream();
 }
 
+class FailToConnect extends ChatActionEvent {
+  bool isFirstQuery;
+  FailToConnect({required this.isFirstQuery});
+}
+
 /*---------------------------state------------------------------*/
-sealed class ChatActionState extends Equatable {
+sealed class ChatActionState{
   const ChatActionState();
+  @override
+  bool operator == (Object other) {
+    return false;// 如果不是内存中的同一个对象，直接不等，重建的过滤在buildWhen中把握，因为很多
+  }
+  // @override
+  // // TODO: implement hashCode
+  // int get hashCode => super.hashCode;// 不会使用hash结构，不重写hashCode方法
 }
 
 class InitialChatActionState extends ChatActionState {
-  const InitialChatActionState();
   @override
-  List<Object?> get props => [];
+  bool operator == (Object other) {
+    return false;// 如果不是内存中的同一个对象，直接不等，重建的过滤在buildWhen中把握，因为很多
+  }
+  const InitialChatActionState();
 }
 
 class WaitingForFirstQuery extends ChatActionState {
-  const WaitingForFirstQuery();
   @override
-  List<Object?> get props => [];
+  bool operator == (Object other) {
+    return false;// 如果不是内存中的同一个对象，直接不等，重建的过滤在buildWhen中把握，因为很多
+  }
+  const WaitingForFirstQuery();
 }
 
 class WaitingForQuery extends ChatActionState {
-  const WaitingForQuery();
   @override
-  List<Object?> get props => [];
+  bool operator == (Object other) {
+    return false;// 如果不是内存中的同一个对象，直接不等，重建的过滤在buildWhen中把握，因为很多
+  }
+  const WaitingForQuery();
 }
 
 class ReceivingPieces extends ChatActionState {
-  const ReceivingPieces();
   @override
-  List<Object?> get props => [];
+  bool operator == (Object other) {
+    return false;// 如果不是内存中的同一个对象，直接不等，重建的过滤在buildWhen中把握，因为很多
+  }
+  const ReceivingPieces();
+}
+
+class WaitingForStream extends ChatActionState {
+  @override
+  bool operator == (Object other) {
+    return false;// 如果不是内存中的同一个对象，直接不等，重建的过滤在buildWhen中把握，因为很多
+  }
+  const WaitingForStream();
 }
 
 // class ChatActionFailure extends ChatActionState {
@@ -120,6 +148,8 @@ class ChatActionBloc extends Bloc<ChatActionEvent, ChatActionState> {
     on<MsgPieceArrived>(_onMsgPieceArrived);
     on<TerminateStream>(_onTerminateStream);
     on<MsgPieceOver>(_onMsgPieceOver);
+
+    on<FailToConnect>(_onFailToConnect);
   }
 
   void _onOpenNewSessionPage(OpenNewSessionPage event, Emitter<ChatActionState> emit) {
@@ -132,6 +162,7 @@ class ChatActionBloc extends Bloc<ChatActionEvent, ChatActionState> {
   }
 
   void _onSendFirstQuery(SendFirstQuery event, Emitter<ChatActionState> emit) {
+    emit(const WaitingForStream());
     // 包装好消息
     Message msg = Message(
       sessionId: invalidSessionId,
@@ -167,6 +198,10 @@ class ChatActionBloc extends Bloc<ChatActionEvent, ChatActionState> {
           ),
         );
       },
+      onError: (){
+        // 状态改变为等待用户输入
+        add(FailToConnect(isFirstQuery: true));
+      }
     );
   }
 
@@ -194,6 +229,7 @@ class ChatActionBloc extends Bloc<ChatActionEvent, ChatActionState> {
   }
 
   void _onSendQuery(SendQuery event, Emitter<ChatActionState> emit) {
+    emit(const WaitingForStream());
     // 包装好消息
     Message msg = Message(
       sessionId: _chatHisStateRep.nowSession.sessionId,
@@ -216,6 +252,7 @@ class ChatActionBloc extends Bloc<ChatActionEvent, ChatActionState> {
               queryMsg: msg,
             ),
         );
+        print('@@@@@@@@@@@@@@@@@@@@add Stream Opened Event');
       },
       onOver: (){
         add(const MsgPieceOver());
@@ -225,10 +262,16 @@ class ChatActionBloc extends Bloc<ChatActionEvent, ChatActionState> {
           MsgPieceArrived(piece),
         );
       },
+      onError: (){
+        // 状态改变为等待用户输入
+        add(FailToConnect(isFirstQuery: false));
+      }
     );
   }
 
+  // 留被建立时才会放入waiting气泡
   void _onStreamOpened(StreamOpened event, Emitter<ChatActionState> emit) {
+    print('@@@@@@@@@@@@@@@@@@@@invoked _onStreamOpened');
     // 只要连接真正建立了,才将用户的query插入
     _chatHisStateRep.addNewMessage(event.queryMsg);
     _chatRep.saveMessage(event.queryMsg);
@@ -238,12 +281,15 @@ class ChatActionBloc extends Bloc<ChatActionEvent, ChatActionState> {
         MessagePiece.waiting(),
       ),
     );
+    print('@@@@@@@@@@@@@@@@@@@@added MessagePiece.waiting()');
     _streamSubscription = event.streamSubscription;
     // 进入听数据，不断接受的状态
     emit(const ReceivingPieces());
+    print('@@@@@@@@@@@@@@@@@@@@emitted const ReceivingPieces()');
   }
 
   void _onMsgPieceArrived(MsgPieceArrived event, Emitter<ChatActionState> emit) {
+    print('@@@@@@@@@@@@@@@@@@@@invoked _onMsgPieceArrived');
     MessagePiece piece = event.messagePiece;
     // 更新状态记录
     _chatHisStateRep.appendNewMessagePiece(piece);// 此方法会自动处理isEnd,所以再这一步无需多考虑
@@ -276,5 +322,13 @@ class ChatActionBloc extends Bloc<ChatActionEvent, ChatActionState> {
     // 存入数据库
     _chatRep.saveMessage(_chatHisStateRep.messages.last);
     emit(const WaitingForQuery());
+  }
+
+  void _onFailToConnect(FailToConnect event, Emitter<ChatActionState> emit) {
+    if(event.isFirstQuery){
+      emit(const WaitingForFirstQuery());
+    }else{
+      emit(const WaitingForQuery());
+    }
   }
 }

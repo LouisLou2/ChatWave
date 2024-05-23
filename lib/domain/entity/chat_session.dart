@@ -23,7 +23,7 @@ class ChatSession{
   });
 
   ChatSession.fromJson(Map<String, dynamic> json,this.userId)
-      : sessionId = json['sessionId'],
+      : sessionId = json['session_id'],
         title = json['title'],
         lastMsgTime = DateTime.parse(json['time']);
 }
