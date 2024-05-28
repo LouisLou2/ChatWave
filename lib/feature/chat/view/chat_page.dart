@@ -374,8 +374,10 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
                       padding: const EdgeInsets.only(left: 10),
                       child: IconButton(
                         onPressed: () {
+                          GetIt.I<ChatSessionBloc>().add(InitRetrieveSession(
+                              nowSessionId: GetIt.I<ChatHistoryStateRep>().nowSession.sessionId
+                          ));
                           Scaffold.of(context).openDrawer();
-                          print(context.theme.colorScheme.surface,);
                         },
                         icon: Icon(
                           Icons.menu_rounded,
@@ -389,7 +391,7 @@ class _HomePageState extends State<ChatPage> with SingleTickerProviderStateMixin
                         child: IconButton(
                           onPressed: () {
                             NavigationHelper.pop();
-                            //GetIt.I<HomePageLoadBloc>().add(const StartLoadHomePage());
+                            GetIt.I<HomePageLoadBloc>().add(const StartLoadHomePage());
                           },
                           icon: Icon(
                             Icons.arrow_back_ios,

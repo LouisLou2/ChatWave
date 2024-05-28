@@ -50,17 +50,22 @@ class ChatBubble extends StatelessWidget{
     //     ),
     //   ),
     // );
-    return msg.isSender ? Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child:Align(
-        alignment: Alignment.centerRight,
-        child: innerWidget,
-      ),
-    ):Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child:Align(
-        alignment: Alignment.centerLeft,
-        child: innerWidget,
+    return msg.isSender ? FadeInRight(child:
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          child:Align(
+            alignment: Alignment.centerRight,
+            child: innerWidget,
+          ),
+        )
+      ):
+      FadeInLeft(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child:Align(
+          alignment: Alignment.centerLeft,
+          child: innerWidget,
+        ),
       ),
     );
   }

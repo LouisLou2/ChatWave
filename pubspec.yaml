@@ -66,6 +66,7 @@ dependencies:
   chat_bubbles: ^1.6.0
   animate_do: ^3.3.4
   eventflux: ^2.0.2
+  flutter_markdown: ^0.7.1
   # file_picker: ^8.0.3
   # image_picker: ^1.1.1
   # mime: ^1.0.5

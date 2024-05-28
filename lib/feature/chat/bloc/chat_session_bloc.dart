@@ -23,7 +23,8 @@ sealed class ChatSessionEvent{
 }
 
 class InitRetrieveSession extends ChatSessionEvent{
-  const InitRetrieveSession();
+  final int nowSessionId;
+  const InitRetrieveSession({required this.nowSessionId});
 }
 class RetrieveChatSession extends ChatSessionEvent{
   const RetrieveChatSession();
@@ -55,11 +56,12 @@ class ChatSessionLoading extends ChatSessionState{
 }
 
 class ChatSessionSuccess extends ChatSessionState{
+  final int nowIndex;
   final int len;
-  final SessionChangeFrom chageFrom;
-  const ChatSessionSuccess({required this.len, required this.chageFrom});
+  final SessionChangeFrom changeFrom;
+  const ChatSessionSuccess({required this.len, required this.changeFrom,required this.nowIndex});
   @override
-  List<Object?> get props => [len, chageFrom];
+  List<Object?> get props => [len, changeFrom,nowIndex];
 }
 
 class ChatSessionFailure extends ChatSessionState{
@@ -71,11 +73,15 @@ class ChatSessionFailure extends ChatSessionState{
 /*-------------------state_repository-----------*/
 class ChatSessionStateRep {
   List<ChatSession> sessions = [];
+  int nowIndex=0;
   void setSessions(List<ChatSession> chats) {
     sessions = chats;
   }
+  void setNowIndex(int index){
+    nowIndex=index;
+  }
   void addSessions(List<ChatSession> chats) {
-    sessions.addAll(chats);
+    sessions.addAll(chats);// 追加
   }
 }
 /*--------------------bloc----------------------*/
@@ -99,14 +105,22 @@ class ChatSessionBloc extends Bloc<ChatSessionEvent, ChatSessionState>{
         num: FeatureConst.defHistoryChatSessionNum,
         userId: TestData.testUserId,
     );
+    int nowIndex=0;
     if(!result.isSuccess) {
       ToastHelper.showToasterWithRescode(result.resCode);// 几乎不可能失败
       emit(const ChatSessionFailure());
     } else {
       _stateRep.setSessions(result.data!);
+      for(int i=0;i<_stateRep.sessions.length;++i){
+        if(_stateRep.sessions[i].sessionId==event.nowSessionId){
+          nowIndex=i;
+          break;
+        }
+      }
       emit(ChatSessionSuccess(
+        nowIndex: nowIndex,
         len: _stateRep.sessions.length,
-        chageFrom: SessionChangeFrom.Local,
+        changeFrom: SessionChangeFrom.Local,
       ));
     }
     // 开始从网络获取最新数据
@@ -120,9 +134,16 @@ class ChatSessionBloc extends Bloc<ChatSessionEvent, ChatSessionState>{
       emit(const ChatSessionFailure());
     } else {
       _stateRep.setSessions(result.data!);
+      for(int i=0;i<_stateRep.sessions.length;++i){
+        if(_stateRep.sessions[i].sessionId==event.nowSessionId){
+          nowIndex=i;
+          break;
+        }
+      }
       emit(ChatSessionSuccess(
+        nowIndex: nowIndex,
         len: _stateRep.sessions.length,
-        chageFrom: SessionChangeFrom.Net,
+        changeFrom: SessionChangeFrom.Net,
       ));
     }
   }
@@ -139,12 +160,13 @@ class ChatSessionBloc extends Bloc<ChatSessionEvent, ChatSessionState>{
     } else {
       _stateRep.addSessions(result.data!);
       emit(ChatSessionSuccess(
+        nowIndex: _stateRep.nowIndex,
         len: _stateRep.sessions.length,
-        chageFrom: SessionChangeFrom.Net,
+        changeFrom: SessionChangeFrom.Net,
       ));
     }
   }
-  // void _chooseSession(ChooseSession event, Emitter<ChatSessionState> emit) async {
+  // void _chooseSession(ChooseSes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              s;;;;;ion event, Emitter<ChatSessionState> emit) async {
   //   _historyStateRep.setNowSession(event.chosenSession);
   // }
   void _onNewSessionCreated(NewSessionCreated event, Emitter<ChatSessionState> emit) async {
@@ -152,8 +174,9 @@ class ChatSessionBloc extends Bloc<ChatSessionEvent, ChatSessionState>{
     // 保存到数据库
     _chatRep.saveSession(event.newSession);
     emit(ChatSessionSuccess(
+      nowIndex: 0,
       len: _stateRep.sessions.length,
-      chageFrom: SessionChangeFrom.UserNow,
+      changeFrom: SessionChangeFrom.UserNow,
     ));
   }
 }

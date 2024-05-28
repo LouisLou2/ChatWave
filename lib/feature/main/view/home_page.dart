@@ -38,10 +38,22 @@ class _HomePageState extends State<HomePage> {
         GetIt.I<HomePageLoadBloc>().add(const RetrieveRecentChats());
       }
     });
+    _scrollController1.addListener(() {
+      if (_scrollController1.position.pixels == _scrollController1.position.minScrollExtent) {
+        // 到达底部
+        GetIt.I<HomePageLoadBloc>().add(const ForceNetFlush());
+      }
+    });
     _scrollController2.addListener(() {
       if (_scrollController2.position.pixels == _scrollController2.position.maxScrollExtent) {
         // 到达底部
         GetIt.I<HomePageLoadBloc>().add(const RetrieveRecentChats());
+      }
+    });
+    _scrollController2.addListener(() {
+      if (_scrollController2.position.pixels == _scrollController2.position.minScrollExtent) {
+        // 到达底部
+        GetIt.I<HomePageLoadBloc>().add(const ForceNetFlush());
       }
     });
     super.initState();

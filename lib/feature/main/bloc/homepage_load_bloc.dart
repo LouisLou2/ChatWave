@@ -21,6 +21,10 @@ class StartLoadHomePage extends HomePageLoadEvent {
 class RetrieveRecentChats extends HomePageLoadEvent {
   const RetrieveRecentChats();
 }
+
+class ForceNetFlush extends HomePageLoadEvent {
+  const ForceNetFlush();
+}
 /*-----------------state----------------------*/
 sealed class HomePageLoadState extends Equatable {
   const HomePageLoadState();
@@ -59,7 +63,7 @@ class HomePageStateRep {
     recentChats = chats;
   }
   void addRecentChats(List<ChatSession> chats) {
-    recentChats.addAll(chats);
+    recentChats.insertAll(0, chats);
   }
 }
 
@@ -72,6 +76,7 @@ class HomePageLoadBloc extends Bloc<HomePageLoadEvent, HomePageLoadState> {
   HomePageLoadBloc() : super(const HomePageLoadInitial()) {
     on<StartLoadHomePage>(_startLoadHomePage);
     on<RetrieveRecentChats>(_retrieveRecentChats);
+    on<ForceNetFlush>(_onForceNetFlush);
   }
   /*-------------handle all the event-------------*/
   void _startLoadHomePage(StartLoadHomePage event, Emitter<HomePageLoadState> emit) async{
@@ -126,6 +131,26 @@ class HomePageLoadBloc extends Bloc<HomePageLoadEvent, HomePageLoadState> {
       emit(const HomePageLoadFailure());
     } else {
       _homeStateRep.addRecentChats(result.data!);
+      emit(
+        HomePageLoadSuccess(
+          len: _homeStateRep.recentChats.length,
+          changeFrom: SessionChangeFrom.Net,
+        ),
+      );
+    }
+  }
+  void _onForceNetFlush(ForceNetFlush event, Emitter<HomePageLoadState> emit) async {
+    emit(const HomePageLoadInProgress());
+    Result<List<ChatSession>> result = await _chatRep.getRecentChatsOnlyNet(
+      offset: 0,
+      num: FeatureConst.defHistoryChatSessionNum,
+      userId: TestData.testUserId,
+    );
+    if(!result.isSuccess) {
+      ToastHelper.showToasterWithRescode(result.resCode);// 几乎不可能失败
+      emit(const HomePageLoadFailure());
+    } else {
+      _homeStateRep.setRecentChats(result.data!);
       emit(
         HomePageLoadSuccess(
           len: _homeStateRep.recentChats.length,
